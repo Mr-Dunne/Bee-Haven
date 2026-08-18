@@ -44,9 +44,20 @@ class ReportCategory(enum.Enum):
     PHYSICAL_CONFLICT = "Physical Conflict"
     ATTENDANCE = "Attendance/Absence"
     PROPERTY_DAMAGE = "Property Damage"
+    OTHER = "Other"
 
 
 class ReportSeverity(enum.Enum):
     MINOR = "Minor Concern"
     MODERATE = "Moderate Concern"
     MAJOR = "Major Concern"
+
+class Report(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
+    category = db.Column(db.Enum(ReportCategory), nullable=False)
+    severity = db.Column(db.Enum(ReportSeverity), nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+

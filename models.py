@@ -30,11 +30,14 @@ class Student(db.Model):
     parent_email = db.Column(db.String(120), nullable=True)
     parent_phone = db.Column(db.String(20), nullable=True)
 
-    reports = db.relationship("BehaviorReport", backref="student", lazy=True)
+    reports = db.relationship("BehaviorReport", backref="student", lazy=True, cascade="all, delete-orphan")
 
-class ReportCategory(enum.Enum):
+class ReportType(enum.Enum):
     POSITIVE = "Positive"
     NEGATIVE = "Negative"
+
+
+class NegativeReportCategory(enum.Enum):
     DISRUPTION = "Disruption"
     TECH_MISUSE = "Inappropriate Use of Technology"
     ACADEMIC_DISHONESTY = "Academic Dishonesty"
@@ -47,6 +50,12 @@ class ReportCategory(enum.Enum):
     OTHER = "Other"
 
 
+class PositiveReportCategory(enum.Enum):
+    ACADEMIC = "Academic"
+    BEHAVIORAL = "Behavioral"
+    OTHER = "Other"
+
+
 class ReportSeverity(enum.Enum):
     MINOR = "Minor Concern"
     MODERATE = "Moderate Concern"
@@ -56,12 +65,23 @@ class BehaviorReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
-    category = db.Column(db.Enum(ReportCategory), nullable=False)
-    severity = db.Column(db.Enum(ReportSeverity), nullable=False)
+    report_type = db.Column(db.Enum(ReportType), nullable=False)
+    # A single column can't be typed as "one of two enums" in SQLAlchemy, so this
+    # stores the .name of whichever category enum matches report_type
+    # (PositiveReportCategory or NegativeReportCategory) as plain text, and
+    # category_enum() below resolves it back to the right enum member.
+    category = db.Column(db.String(32), nullable=False)
+    # Only negative reports carry a severity; positive reports leave this null.
+    severity = db.Column(db.Enum(ReportSeverity), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    contacts = db.relationship("ParentContact", backref="report", lazy=True)
+    contacts = db.relationship("ParentContact", backref="report", lazy=True, cascade="all, delete-orphan")
+
+    def category_enum(self):
+        if self.report_type == ReportType.POSITIVE:
+            return PositiveReportCategory[self.category]
+        return NegativeReportCategory[self.category]
 
 
 class ContactMethod(enum.Enum):

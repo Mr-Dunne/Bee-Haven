@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+
+{% macro pencil_icon() %}
+<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+{% endmacro %}
+
 {% block content %}
 
 <div class="class-tabs">
@@ -6,30 +11,67 @@
         <a class="tab {% if active_class and active_class.id == c.id %}active{% endif %}"
            href="{{ url_for('view_class', class_id=c.id) }}">{{ c.name }}</a>
     {% endfor %}
-    <form class="tab add-tab" method="post" action="{{ url_for('add_class') }}">
-        <input type="text" name="name" placeholder="+ Add class" required>
+
+    <button type="button" class="tab add-tab-toggle" id="add-class-toggle">+ Add class</button>
+    <form class="tab add-tab" method="post" action="{{ url_for('add_class') }}" id="add-class-form" hidden>
+        <input type="text" name="name" placeholder="New class name" required>
+        <button type="submit">Add</button>
+        <button type="button" class="cancel-btn" id="add-class-cancel">Cancel</button>
     </form>
 </div>
 
 <div class="split-pane">
     <section class="roster-pane">
         {% if active_class %}
-            <h2>{{ active_class.name }}</h2>
+            <div class="pane-header" id="class-name-display">
+                <a class="class-name-link" href="{{ url_for('view_class', class_id=active_class.id) }}">
+                    <h2>{{ active_class.name }}</h2>
+                </a>
+                <button type="button" class="icon-btn" id="class-name-edit-toggle" aria-label="Edit class name">{{ pencil_icon() }}</button>
+            </div>
+            <form class="inline-edit-form" id="class-name-edit-form" hidden method="post"
+                  action="{{ url_for('edit_class', class_id=active_class.id) }}">
+                <input type="text" name="name" value="{{ active_class.name }}" required>
+                <div class="edit-actions">
+                    <button type="submit">Save</button>
+                    <button type="button" class="cancel-btn" id="class-name-edit-cancel">Cancel</button>
+                </div>
+            </form>
+
             <ul class="roster-list">
                 {% for s in active_class.students %}
-                    <li>
-                        <a class="{% if active_student and active_student.id == s.id %}active{% endif %}"
-                           href="{{ url_for('view_student', class_id=active_class.id, student_id=s.id) }}">{{ s.name }}</a>
+                    <li class="roster-row">
+                        <div class="roster-row-display" id="student-display-{{ s.id }}">
+                            <a class="{% if active_student and active_student.id == s.id %}active{% endif %}"
+                               href="{{ url_for('view_student', class_id=active_class.id, student_id=s.id) }}">{{ s.name }}</a>
+                            <button type="button" class="icon-btn student-edit-toggle" data-student-id="{{ s.id }}" aria-label="Edit student">{{ pencil_icon() }}</button>
+                        </div>
+                        <form class="inline-edit-form" id="student-edit-form-{{ s.id }}" hidden method="post"
+                              action="{{ url_for('edit_student', class_id=active_class.id, student_id=s.id) }}">
+                            <input type="text" name="name" value="{{ s.name }}" required placeholder="Student name">
+                            <input type="email" name="parent_email" value="{{ s.parent_email or '' }}" placeholder="Parent email">
+                            <input type="tel" name="parent_phone" value="{{ s.parent_phone or '' }}" placeholder="Parent phone">
+                            <div class="edit-actions">
+                                <button type="submit">Save</button>
+                                <button type="button" class="cancel-btn student-edit-cancel" data-student-id="{{ s.id }}">Cancel</button>
+                            </div>
+                        </form>
                     </li>
                 {% else %}
                     <li class="empty">No students yet.</li>
                 {% endfor %}
             </ul>
-            <form method="post" action="{{ url_for('add_student', class_id=active_class.id) }}" class="add-student-form">
+
+            <button type="button" class="add-student-toggle" id="add-student-toggle">+ Add student</button>
+            <form method="post" action="{{ url_for('add_student', class_id=active_class.id) }}"
+                  class="add-student-form" id="add-student-form" hidden>
                 <input type="text" name="name" placeholder="Student name" required>
                 <input type="email" name="parent_email" placeholder="Parent email">
                 <input type="tel" name="parent_phone" placeholder="Parent phone">
-                <button type="submit">Add student</button>
+                <div class="edit-actions">
+                    <button type="submit">Add student</button>
+                    <button type="button" class="cancel-btn" id="add-student-cancel">Cancel</button>
+                </div>
             </form>
         {% else %}
             <p class="placeholder">Select or add a class to see its roster.</p>
@@ -44,8 +86,9 @@
             <h3>Report history</h3>
             <ul class="report-list">
                 {% for r in active_student.reports|sort(attribute="created_at", reverse=true) %}
-                    <li class="severity-{{ r.severity.name|lower }}">
-                        <strong>{{ r.category.value }}</strong> -- {{ r.severity.value }}
+                    <li class="severity-{{ r.severity.name|lower if r.severity else 'positive' }}">
+                        <strong>{{ r.category_enum().value }}</strong>
+                        {% if r.severity %} -- {{ r.severity.value }}{% else %} -- Positive{% endif %}
                         <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
                         {% if r.notes %}<p>{{ r.notes }}</p>{% endif %}
                     </li>
@@ -57,30 +100,55 @@
             <h3>File a report</h3>
             <form method="post"
                   action="{{ url_for('add_report', class_id=active_class.id, student_id=active_student.id) }}"
-                  class="report-form">
-                <label>Category
-                    <select name="category" required>
-                        {% for cat in categories %}
+                  class="report-form" id="report-form">
+                <label>Report type
+                    <select name="report_type" id="report_type">
+                        {% for rt in report_types %}
+                            <option value="{{ rt.name }}">{{ rt.value }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label id="negative-category-label">Category
+                    <select name="category" id="negative-category">
+                        {% for cat in negative_categories %}
                             <option value="{{ cat.name }}">{{ cat.value }}</option>
                         {% endfor %}
                     </select>
                 </label>
-                <label>Severity
-                    <select name="severity" required>
+                <label id="positive-category-label" hidden>Category
+                    <select name="category" id="positive-category" disabled>
+                        {% for cat in positive_categories %}
+                            <option value="{{ cat.name }}">{{ cat.value }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label id="severity-label">Severity
+                    <select name="severity" id="severity">
                         {% for sev in severities %}
                             <option value="{{ sev.name }}">{{ sev.value }}</option>
                         {% endfor %}
                     </select>
                 </label>
+
                 <label>Notes
                     <textarea name="notes" rows="3"></textarea>
                 </label>
                 <button type="submit">File report</button>
             </form>
+
+            <h3>Manage student</h3>
+            <form method="post"
+                  action="{{ url_for('delete_student', class_id=active_class.id, student_id=active_student.id) }}"
+                  onsubmit="return confirm('Remove {{ active_student.name }}? This also deletes their report history and cannot be undone.');">
+                <button type="submit" class="danger-btn">Remove student</button>
+            </form>
         {% elif active_class %}
             <h2>Class stats</h2>
             <p>{{ active_class.students|length }} student(s)</p>
             <ul class="stats-list">
+                <li class="severity-positive">Positive: {{ positive_count }}</li>
                 {% for sev, count in severity_counts.items() %}
                     <li class="severity-{{ sev.name|lower }}">{{ sev.value }}: {{ count }}</li>
                 {% endfor %}
@@ -91,5 +159,93 @@
         {% endif %}
     </section>
 </div>
+
+<script>
+    function wireToggle(toggleEl, formEl, cancelEl) {
+        if (!toggleEl || !formEl) return;
+        toggleEl.addEventListener("click", () => {
+            formEl.hidden = false;
+            toggleEl.hidden = true;
+        });
+        if (cancelEl) {
+            cancelEl.addEventListener("click", () => {
+                formEl.hidden = true;
+                formEl.reset();
+                toggleEl.hidden = false;
+            });
+        }
+    }
+
+    wireToggle(
+        document.getElementById("add-class-toggle"),
+        document.getElementById("add-class-form"),
+        document.getElementById("add-class-cancel")
+    );
+
+    wireToggle(
+        document.getElementById("add-student-toggle"),
+        document.getElementById("add-student-form"),
+        document.getElementById("add-student-cancel")
+    );
+
+    wireToggle(
+        document.getElementById("class-name-edit-toggle"),
+        document.getElementById("class-name-edit-form"),
+        document.getElementById("class-name-edit-cancel")
+    );
+    // The pencil toggle sits inside the pane-header alongside the name link/heading,
+    // not a plain button, so hide that whole header while the rename form is open.
+    const classNameEditToggle = document.getElementById("class-name-edit-toggle");
+    const classNameEditForm = document.getElementById("class-name-edit-form");
+    if (classNameEditToggle && classNameEditForm) {
+        const classNameDisplay = document.getElementById("class-name-display");
+        classNameEditToggle.addEventListener("click", () => { classNameDisplay.hidden = true; });
+        document.getElementById("class-name-edit-cancel").addEventListener("click", () => { classNameDisplay.hidden = false; });
+    }
+
+    document.querySelectorAll(".student-edit-toggle").forEach((toggle) => {
+        const id = toggle.dataset.studentId;
+        const display = document.getElementById(`student-display-${id}`);
+        const form = document.getElementById(`student-edit-form-${id}`);
+        const cancel = document.querySelector(`.student-edit-cancel[data-student-id="${id}"]`);
+        toggle.addEventListener("click", () => {
+            display.hidden = true;
+            form.hidden = false;
+        });
+        if (cancel) {
+            cancel.addEventListener("click", () => {
+                form.hidden = true;
+                form.reset();
+                display.hidden = false;
+            });
+        }
+    });
+
+    const reportTypeSelect = document.getElementById("report_type");
+    if (reportTypeSelect) {
+        const negativeLabel = document.getElementById("negative-category-label");
+        const positiveLabel = document.getElementById("positive-category-label");
+        const negativeSelect = document.getElementById("negative-category");
+        const positiveSelect = document.getElementById("positive-category");
+        const severityLabel = document.getElementById("severity-label");
+        const severitySelect = document.getElementById("severity");
+
+        function updateReportForm() {
+            const isPositive = reportTypeSelect.value === "POSITIVE";
+
+            negativeLabel.hidden = isPositive;
+            negativeSelect.disabled = isPositive;
+
+            positiveLabel.hidden = !isPositive;
+            positiveSelect.disabled = !isPositive;
+
+            severityLabel.hidden = isPositive;
+            severitySelect.disabled = isPositive;
+        }
+
+        reportTypeSelect.addEventListener("change", updateReportForm);
+        updateReportForm();
+    }
+</script>
 
 {% endblock %}

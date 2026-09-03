@@ -1,22 +1,34 @@
 :root {
-    --off-white: #faf8f4;
-    --silver: #d9d6cf;
-    --honey: #e3a52c;
-    --honey-dark: #c98a1b;
-    --cream: #fff6df;
-    --sage: #93a97e;
-    --coral: #e46f56;
-    --ink: #3a3226;
+    --bg: #1c1e22;
+    --panel: #24262b;
+    --panel-alt: #2c2e34;
+    --border: #3c3f46;
+    --ink: #dfe1e5;
+    --muted: #8b8f98;
+    --gold: #b8892b;
+    --gold-dark: #96701f;
+    --gold-wash: #332c1c;
+    --danger: #a1453a;
+    --danger-dark: #7f362d;
+    --positive: #4c7a5e;
 }
 
 * {
     box-sizing: border-box;
 }
 
+/* Elements with the `hidden` attribute must actually stay hidden -- without
+   this, any class-based `display` rule below (e.g. `.inline-edit-form`)
+   would win the cascade over the browser's built-in [hidden] rule, since
+   author styles beat user-agent styles at equal specificity. */
+[hidden] {
+    display: none !important;
+}
+
 body {
     margin: 0;
     font-family: system-ui, sans-serif;
-    background: var(--off-white);
+    background: var(--bg);
     color: var(--ink);
 }
 
@@ -25,8 +37,8 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1.5rem;
-    background: var(--cream);
-    border-bottom: 2px solid var(--honey);
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
 }
 
 .brand {
@@ -41,15 +53,16 @@ body {
 
 .hex-mark {
     display: inline-block;
-    width: 22px;
-    height: 22px;
-    background: var(--honey);
+    width: 20px;
+    height: 20px;
+    background: var(--gold);
     clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
 }
 
 .prototype-flag {
     font-size: 0.8rem;
-    color: var(--coral);
+    color: var(--muted);
+    font-style: italic;
 }
 
 main {
@@ -58,38 +71,63 @@ main {
 
 .class-tabs {
     display: flex;
-    align-items: stretch;
+    align-items: flex-end;
     gap: 0.25rem;
-    border-bottom: 2px solid var(--silver);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
 }
 
 .tab {
     padding: 0.5rem 1rem;
-    background: var(--silver);
-    border-radius: 8px 8px 0 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
     text-decoration: none;
-    color: var(--ink);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
 }
 
 .tab.active {
-    background: var(--off-white);
-    border: 2px solid var(--silver);
-    border-bottom: 2px solid var(--off-white);
-    margin-bottom: -2px;
+    color: var(--ink);
     font-weight: 600;
+    border-top: 2px solid var(--gold);
+    margin-top: -1px;
+}
+
+.add-tab-toggle {
+    color: var(--gold);
+    background: none;
+}
+
+.add-tab-toggle:hover {
+    background: var(--gold-wash);
 }
 
 .add-tab {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
     background: none;
-    padding: 0;
+    border: none;
+    padding: 0.25rem 0 0.25rem 0.5rem;
 }
 
 .add-tab input {
-    width: 110px;
-    padding: 0.5rem;
-    border: 1px dashed var(--silver);
-    border-radius: 8px 8px 0 0;
-    background: var(--off-white);
+    width: 140px;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel-alt);
+    color: var(--ink);
+    font-family: inherit;
+}
+
+.add-tab button {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
 }
 
 .split-pane {
@@ -99,72 +137,181 @@ main {
 }
 
 .roster-pane {
-    width: 260px;
+    width: 280px;
     flex-shrink: 0;
-    border-right: 1px solid var(--silver);
-    padding-right: 1.5rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
 }
 
 .detail-pane {
     flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+}
+
+.pane-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pane-header h2 {
+    margin: 0;
+}
+
+.class-name-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.class-name-link:hover h2 {
+    color: var(--gold);
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    padding: 0.3rem;
+    color: var(--muted);
+    cursor: pointer;
+    align-self: auto;
+    border-radius: 4px;
+}
+
+.icon-btn:hover {
+    background: var(--panel-alt);
+    color: var(--gold);
 }
 
 .roster-list {
     list-style: none;
     padding: 0;
-    margin: 0 0 1rem 0;
+    margin: 1rem 0;
 }
 
-.roster-list li a {
-    display: block;
+.roster-row {
+    margin-bottom: 0.15rem;
+}
+
+.roster-row-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 6px;
+}
+
+.roster-row-display a {
+    flex: 1;
     padding: 0.4rem 0.6rem;
     border-radius: 6px;
     text-decoration: none;
     color: var(--ink);
 }
 
-.roster-list li a.active {
-    background: var(--honey);
-    color: white;
+.roster-row-display a.active {
+    background: var(--gold-wash);
+    color: var(--gold);
+    font-weight: 600;
 }
 
-.roster-list li a:hover {
-    background: var(--cream);
+.roster-row-display:hover a {
+    background: var(--panel-alt);
 }
 
 .empty, .placeholder {
-    color: #8a8172;
+    color: var(--muted);
     font-style: italic;
 }
 
-.add-student-form, .report-form {
+.add-student-toggle {
+    background: none;
+    color: var(--gold);
+    border: 1px dashed var(--border);
+    width: 100%;
+}
+
+.add-student-toggle:hover {
+    background: var(--gold-wash);
+}
+
+.add-student-form,
+.inline-edit-form,
+.report-form {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     max-width: 320px;
+    margin-top: 0.75rem;
 }
 
 .add-student-form input,
+.inline-edit-form input,
 .report-form select,
 .report-form textarea {
     padding: 0.4rem;
-    border: 1px solid var(--silver);
+    border: 1px solid var(--border);
     border-radius: 6px;
     font-family: inherit;
+    background: var(--panel-alt);
+    color: var(--ink);
+}
+
+.add-student-form input::placeholder,
+.inline-edit-form input::placeholder {
+    color: var(--muted);
+}
+
+.report-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.edit-actions {
+    display: flex;
+    gap: 0.5rem;
 }
 
 button {
     padding: 0.5rem 1rem;
-    background: var(--honey);
-    color: white;
+    background: var(--gold);
+    color: #1c1e22;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     align-self: flex-start;
+    font-weight: 600;
 }
 
 button:hover {
-    background: var(--honey-dark);
+    background: var(--gold-dark);
+}
+
+.cancel-btn {
+    background: none;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-weight: normal;
+}
+
+.cancel-btn:hover {
+    background: var(--panel-alt);
+    color: var(--ink);
+}
+
+.danger-btn {
+    background: var(--danger);
+    color: var(--ink);
+}
+
+.danger-btn:hover {
+    background: var(--danger-dark);
 }
 
 .report-list {
@@ -176,33 +323,44 @@ button:hover {
     padding: 0.6rem 0.8rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    border-left: 4px solid var(--silver);
-    background: var(--cream);
+    border-left: 3px solid var(--border);
+    background: var(--panel-alt);
 }
 
 .report-list li p {
     margin: 0.3rem 0 0 0;
+    color: var(--muted);
 }
 
 .date {
     float: right;
-    color: #8a8172;
+    color: var(--muted);
     font-size: 0.85rem;
 }
 
 .severity-minor {
-    border-left-color: var(--sage);
+    border-left-color: var(--muted);
 }
 
 .severity-moderate {
-    border-left-color: var(--honey);
+    border-left-color: var(--gold);
 }
 
 .severity-major {
-    border-left-color: var(--coral);
+    border-left-color: var(--danger);
+}
+
+.severity-positive {
+    border-left-color: var(--positive);
 }
 
 .stats-list {
     list-style: none;
     padding: 0;
+}
+
+.stats-list li {
+    padding: 0.3rem 0.6rem;
+    border-left: 3px solid var(--border);
+    margin-bottom: 0.3rem;
 }

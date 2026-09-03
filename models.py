@@ -14,7 +14,7 @@ class Teacher(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     classes = db.relationship("Class", backref="teacher", lazy=True)
-    reports_filed = db.relationship("Report", backref="filed_by", lazy=True)
+    reports_filed = db.relationship("BehaviorReport", backref="filed_by", lazy=True)
 
 class Class(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,7 +30,7 @@ class Student(db.Model):
     parent_email = db.Column(db.String(120), nullable=True)
     parent_phone = db.Column(db.String(20), nullable=True)
 
-    reports = db.relationship("Report", backref="student", lazy=True)
+    reports = db.relationship("BehaviorReport", backref="student", lazy=True)
 
 class ReportCategory(enum.Enum):
     POSITIVE = "Positive"
@@ -52,7 +52,7 @@ class ReportSeverity(enum.Enum):
     MODERATE = "Moderate Concern"
     MAJOR = "Major Concern"
 
-class Report(db.Model):
+class BehaviorReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
@@ -60,4 +60,24 @@ class Report(db.Model):
     severity = db.Column(db.Enum(ReportSeverity), nullable=False)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    contacts = db.relationship("ParentContact", backref="report", lazy=True)
+
+
+class ContactMethod(enum.Enum):
+    EMAIL = "Email"
+    PHONE = "Phone Call"
+    IN_PERSON = "In Person"
+    OTHER = "Other"
+
+
+class ParentContact(db.Model):
+    # Logs each time a parent/guardian was actually contacted about a specific
+    # report, separate from the student's on-file contact info (parent_email/
+    # parent_phone on Student) so there's a record of what was communicated and when.
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.Integer, db.ForeignKey("behavior_report.id"), nullable=False)
+    method = db.Column(db.Enum(ContactMethod), nullable=False)
+    contacted_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    notes = db.Column(db.Text, nullable=True)
 

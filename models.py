@@ -39,7 +39,7 @@ class ReportCategory(enum.Enum):
     TECH_MISUSE = "Inappropriate Use of Technology"
     ACADEMIC_DISHONESTY = "Academic Dishonesty"
     TARDINESS = "Tardiness"
-    INCOMPLETE_WORK = "Lack of Completion"n 
+    INCOMPLETE_WORK = "Lack of Completion"
     DISRESPECT = "Disrespect/Defiance"
     PHYSICAL_CONFLICT = "Physical Conflict"
     ATTENDANCE = "Attendance/Absence"

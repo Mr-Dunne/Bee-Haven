@@ -86,7 +86,7 @@
             <h3>Report history</h3>
             <ul class="report-list">
                 {% for r in active_student.reports|sort(attribute="created_at", reverse=true) %}
-                    <li class="severity-{{ r.severity.name|lower if r.severity else 'positive' }}">
+                    <li id="report-{{ r.id }}" class="severity-{{ r.severity.name|lower if r.severity else 'positive' }}">
                         <strong>{{ r.category_enum().value }}</strong>
                         {% if r.severity %} -- {{ r.severity.value }}{% else %} -- Positive{% endif %}
                         <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
@@ -144,15 +144,39 @@
                   onsubmit="return confirm('Remove {{ active_student.name }}? This also deletes their report history and cannot be undone.');">
                 <button type="submit" class="danger-btn">Remove student</button>
             </form>
-        {% elif active_class %}
-            <h2>Class stats</h2>
-            <p>{{ active_class.students|length }} student(s)</p>
-            <ul class="stats-list">
-                <li class="severity-positive">Positive: {{ positive_count }}</li>
-                {% for sev, count in severity_counts.items() %}
-                    <li class="severity-{{ sev.name|lower }}">{{ sev.value }}: {{ count }}</li>
+        {% elif active_report_type %}
+            <h2>{{ active_report_type.value }} reports</h2>
+            <ul class="report-list">
+                {% for r in reports %}
+                    <li class="severity-{{ r.severity.name|lower if r.severity else 'positive' }}">
+                        <a class="report-link"
+                           href="{{ url_for('view_student', class_id=active_class.id, student_id=r.student_id) }}#report-{{ r.id }}">
+                            <strong>{{ r.student.name }}</strong> -- {{ r.category_enum().value }}
+                            {% if r.severity %} -- {{ r.severity.value }}{% endif %}
+                            <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="empty">No {{ active_report_type.value|lower }} reports yet.</li>
                 {% endfor %}
             </ul>
+            <a class="back-link" href="{{ url_for('view_class', class_id=active_class.id) }}">&larr; Back to class home</a>
+        {% elif active_class %}
+            <h2>{{ active_class.name }}</h2>
+            <p>{{ active_class.students|length }} student{{ "s" if active_class.students|length != 1 else "" }}</p>
+
+            <div class="reports-section">
+                <h3>Reports</h3>
+                <ul class="stats-list">
+                    <li class="severity-positive">
+                        <a href="{{ url_for('class_reports', class_id=active_class.id, report_type='positive') }}">Positive: {{ positive_count }}</a>
+                    </li>
+                    <li class="severity-negative">
+                        <a href="{{ url_for('class_reports', class_id=active_class.id, report_type='negative') }}">Negative: {{ negative_count }}</a>
+                    </li>
+                </ul>
+            </div>
+
             <p class="placeholder">Select a student on the left to view detail or file a report.</p>
         {% else %}
             <p class="placeholder">Select a class to get started.</p>

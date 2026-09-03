@@ -78,21 +78,41 @@ def view_class(class_id):
     active_class = Class.query.get_or_404(class_id)
 
     reports = BehaviorReport.query.join(Student).filter(Student.class_id == class_id).all()
-    severity_counts = {sev: 0 for sev in ReportSeverity}
-    positive_count = 0
-    for r in reports:
-        if r.report_type == ReportType.POSITIVE:
-            positive_count += 1
-        elif r.severity:
-            severity_counts[r.severity] += 1
+    positive_count = sum(1 for r in reports if r.report_type == ReportType.POSITIVE)
+    negative_count = sum(1 for r in reports if r.report_type == ReportType.NEGATIVE)
 
     return render_template(
         "dashboard.html",
         classes=classes,
         active_class=active_class,
         active_student=None,
-        severity_counts=severity_counts,
+        active_report_type=None,
         positive_count=positive_count,
+        negative_count=negative_count,
+    )
+
+
+@app.route("/classes/<int:class_id>/reports/<report_type>")
+def class_reports(class_id, report_type):
+    teacher = get_demo_teacher()
+    classes = Class.query.filter_by(teacher_id=teacher.id).all()
+    active_class = Class.query.get_or_404(class_id)
+    rtype = ReportType[report_type.upper()]
+
+    reports = (
+        BehaviorReport.query.join(Student)
+        .filter(Student.class_id == class_id, BehaviorReport.report_type == rtype)
+        .order_by(BehaviorReport.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "dashboard.html",
+        classes=classes,
+        active_class=active_class,
+        active_student=None,
+        active_report_type=rtype,
+        reports=reports,
     )
 
 

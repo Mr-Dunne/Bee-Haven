@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="class-tabs">
+    {% for c in classes %}
+        <a class="tab {% if active_class and active_class.id == c.id %}active{% endif %}"
+           href="{{ url_for('view_class', class_id=c.id) }}">{{ c.name }}</a>
+    {% endfor %}
+    <form class="tab add-tab" method="post" action="{{ url_for('add_class') }}">
+        <input type="text" name="name" placeholder="+ Add class" required>
+    </form>
+</div>
+
+<div class="split-pane">
+    <section class="roster-pane">
+        {% if active_class %}
+            <h2>{{ active_class.name }}</h2>
+            <ul class="roster-list">
+                {% for s in active_class.students %}
+                    <li>
+                        <a class="{% if active_student and active_student.id == s.id %}active{% endif %}"
+                           href="{{ url_for('view_student', class_id=active_class.id, student_id=s.id) }}">{{ s.name }}</a>
+                    </li>
+                {% else %}
+                    <li class="empty">No students yet.</li>
+                {% endfor %}
+            </ul>
+            <form method="post" action="{{ url_for('add_student', class_id=active_class.id) }}" class="add-student-form">
+                <input type="text" name="name" placeholder="Student name" required>
+                <input type="email" name="parent_email" placeholder="Parent email">
+                <input type="tel" name="parent_phone" placeholder="Parent phone">
+                <button type="submit">Add student</button>
+            </form>
+        {% else %}
+            <p class="placeholder">Select or add a class to see its roster.</p>
+        {% endif %}
+    </section>
+
+    <section class="detail-pane">
+        {% if active_student %}
+            <h2>{{ active_student.name }}</h2>
+            <p class="meta">Parent: {{ active_student.parent_email or "--" }} / {{ active_student.parent_phone or "--" }}</p>
+
+            <h3>Report history</h3>
+            <ul class="report-list">
+                {% for r in active_student.reports|sort(attribute="created_at", reverse=true) %}
+                    <li class="severity-{{ r.severity.name|lower }}">
+                        <strong>{{ r.category.value }}</strong> -- {{ r.severity.value }}
+                        <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
+                        {% if r.notes %}<p>{{ r.notes }}</p>{% endif %}
+                    </li>
+                {% else %}
+                    <li class="empty">No reports filed yet.</li>
+                {% endfor %}
+            </ul>
+
+            <h3>File a report</h3>
+            <form method="post"
+                  action="{{ url_for('add_report', class_id=active_class.id, student_id=active_student.id) }}"
+                  class="report-form">
+                <label>Category
+                    <select name="category" required>
+                        {% for cat in categories %}
+                            <option value="{{ cat.name }}">{{ cat.value }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Severity
+                    <select name="severity" required>
+                        {% for sev in severities %}
+                            <option value="{{ sev.name }}">{{ sev.value }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Notes
+                    <textarea name="notes" rows="3"></textarea>
+                </label>
+                <button type="submit">File report</button>
+            </form>
+        {% elif active_class %}
+            <h2>Class stats</h2>
+            <p>{{ active_class.students|length }} student(s)</p>
+            <ul class="stats-list">
+                {% for sev, count in severity_counts.items() %}
+                    <li class="severity-{{ sev.name|lower }}">{{ sev.value }}: {{ count }}</li>
+                {% endfor %}
+            </ul>
+            <p class="placeholder">Select a student on the left to view detail or file a report.</p>
+        {% else %}
+            <p class="placeholder">Select a class to get started.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% endblock %}

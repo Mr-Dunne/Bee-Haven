@@ -1,0 +1,208 @@
+:root {
+    --off-white: #faf8f4;
+    --silver: #d9d6cf;
+    --honey: #e3a52c;
+    --honey-dark: #c98a1b;
+    --cream: #fff6df;
+    --sage: #93a97e;
+    --coral: #e46f56;
+    --ink: #3a3226;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--off-white);
+    color: var(--ink);
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    background: var(--cream);
+    border-bottom: 2px solid var(--honey);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.hex-mark {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: var(--honey);
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+.prototype-flag {
+    font-size: 0.8rem;
+    color: var(--coral);
+}
+
+main {
+    padding: 1.5rem;
+}
+
+.class-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0.25rem;
+    border-bottom: 2px solid var(--silver);
+}
+
+.tab {
+    padding: 0.5rem 1rem;
+    background: var(--silver);
+    border-radius: 8px 8px 0 0;
+    text-decoration: none;
+    color: var(--ink);
+}
+
+.tab.active {
+    background: var(--off-white);
+    border: 2px solid var(--silver);
+    border-bottom: 2px solid var(--off-white);
+    margin-bottom: -2px;
+    font-weight: 600;
+}
+
+.add-tab {
+    background: none;
+    padding: 0;
+}
+
+.add-tab input {
+    width: 110px;
+    padding: 0.5rem;
+    border: 1px dashed var(--silver);
+    border-radius: 8px 8px 0 0;
+    background: var(--off-white);
+}
+
+.split-pane {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.roster-pane {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--silver);
+    padding-right: 1.5rem;
+}
+
+.detail-pane {
+    flex: 1;
+}
+
+.roster-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+.roster-list li a {
+    display: block;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--ink);
+}
+
+.roster-list li a.active {
+    background: var(--honey);
+    color: white;
+}
+
+.roster-list li a:hover {
+    background: var(--cream);
+}
+
+.empty, .placeholder {
+    color: #8a8172;
+    font-style: italic;
+}
+
+.add-student-form, .report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 320px;
+}
+
+.add-student-form input,
+.report-form select,
+.report-form textarea {
+    padding: 0.4rem;
+    border: 1px solid var(--silver);
+    border-radius: 6px;
+    font-family: inherit;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    background: var(--honey);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+button:hover {
+    background: var(--honey-dark);
+}
+
+.report-list {
+    list-style: none;
+    padding: 0;
+}
+
+.report-list li {
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border-left: 4px solid var(--silver);
+    background: var(--cream);
+}
+
+.report-list li p {
+    margin: 0.3rem 0 0 0;
+}
+
+.date {
+    float: right;
+    color: #8a8172;
+    font-size: 0.85rem;
+}
+
+.severity-minor {
+    border-left-color: var(--sage);
+}
+
+.severity-moderate {
+    border-left-color: var(--honey);
+}
+
+.severity-major {
+    border-left-color: var(--coral);
+}
+
+.stats-list {
+    list-style: none;
+    padding: 0;
+}

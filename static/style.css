@@ -342,6 +342,25 @@ button:hover {
     text-decoration: none;
 }
 
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.report-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.report-actions .danger-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+}
+
 .report-link:hover {
     color: var(--gold);
 }

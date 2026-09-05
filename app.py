@@ -215,5 +215,29 @@ def add_report(class_id, student_id):
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
 
 
+@app.route("/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/edit", methods=["POST"])
+def edit_report(class_id, student_id, report_id):
+    # report_type is not editable here: it decides which category enum applies,
+    # so switching positive/negative is a delete-and-refile, not an edit.
+    report = BehaviorReport.query.get_or_404(report_id)
+    category_enum = PositiveReportCategory if report.report_type == ReportType.POSITIVE else NegativeReportCategory
+    report.category = category_enum[request.form["category"]].name
+    if report.report_type == ReportType.NEGATIVE:
+        report.severity = ReportSeverity[request.form["severity"]]
+    report.notes = request.form.get("notes", "").strip() or None
+    db.session.commit()
+    return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
+
+
+@app.route("/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/delete", methods=["POST"])
+def delete_report(class_id, student_id, report_id):
+    # Cascade (configured on BehaviorReport.contacts in models.py) takes the
+    # report's contact log with it.
+    report = BehaviorReport.query.get_or_404(report_id)
+    db.session.delete(report)
+    db.session.commit()
+    return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
+
+
 if __name__ == "__main__":
     app.run(debug=True)

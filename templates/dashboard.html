@@ -87,10 +87,57 @@
             <ul class="report-list">
                 {% for r in active_student.reports|sort(attribute="created_at", reverse=true) %}
                     <li id="report-{{ r.id }}" class="severity-{{ r.severity.name|lower if r.severity else 'positive' }}">
-                        <strong>{{ r.category_enum().value }}</strong>
-                        {% if r.severity %} -- {{ r.severity.value }}{% else %} -- Positive{% endif %}
-                        <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
-                        {% if r.notes %}<p>{{ r.notes }}</p>{% endif %}
+                        <div class="report-display" id="report-display-{{ r.id }}">
+                            <div class="report-header">
+                                <div>
+                                    <strong>{{ r.category_enum().value }}</strong>
+                                    {% if r.severity %} -- {{ r.severity.value }}{% else %} -- Positive{% endif %}
+                                    <span class="date">{{ r.created_at.strftime("%Y-%m-%d") }}</span>
+                                    {% if r.notes %}<p>{{ r.notes }}</p>{% endif %}
+                                </div>
+                                <div class="report-actions">
+                                    <button type="button" class="icon-btn report-edit-toggle" data-report-id="{{ r.id }}" aria-label="Edit report">{{ pencil_icon() }}</button>
+                                    <form method="post"
+                                          action="{{ url_for('delete_report', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}"
+                                          onsubmit="return confirm('Delete this report? This cannot be undone.');">
+                                        <button type="submit" class="danger-btn">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form class="inline-edit-form report-edit-form" id="report-edit-form-{{ r.id }}" hidden method="post"
+                              action="{{ url_for('edit_report', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}">
+                            <label>Category
+                                <select name="category">
+                                    {% if r.report_type.name == "POSITIVE" %}
+                                        {% for cat in positive_categories %}
+                                            <option value="{{ cat.name }}" {% if r.category == cat.name %}selected{% endif %}>{{ cat.value }}</option>
+                                        {% endfor %}
+                                    {% else %}
+                                        {% for cat in negative_categories %}
+                                            <option value="{{ cat.name }}" {% if r.category == cat.name %}selected{% endif %}>{{ cat.value }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </label>
+                            {% if r.report_type.name == "NEGATIVE" %}
+                                <label>Severity
+                                    <select name="severity">
+                                        {% for sev in severities %}
+                                            <option value="{{ sev.name }}" {% if r.severity == sev %}selected{% endif %}>{{ sev.value }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </label>
+                            {% endif %}
+                            <label>Notes
+                                <textarea name="notes" rows="3">{{ r.notes or '' }}</textarea>
+                            </label>
+                            <div class="edit-actions">
+                                <button type="submit">Save</button>
+                                <button type="button" class="cancel-btn report-edit-cancel" data-report-id="{{ r.id }}">Cancel</button>
+                            </div>
+                        </form>
                     </li>
                 {% else %}
                     <li class="empty">No reports filed yet.</li>
@@ -232,6 +279,24 @@
         const display = document.getElementById(`student-display-${id}`);
         const form = document.getElementById(`student-edit-form-${id}`);
         const cancel = document.querySelector(`.student-edit-cancel[data-student-id="${id}"]`);
+        toggle.addEventListener("click", () => {
+            display.hidden = true;
+            form.hidden = false;
+        });
+        if (cancel) {
+            cancel.addEventListener("click", () => {
+                form.hidden = true;
+                form.reset();
+                display.hidden = false;
+            });
+        }
+    });
+
+    document.querySelectorAll(".report-edit-toggle").forEach((toggle) => {
+        const id = toggle.dataset.reportId;
+        const display = document.getElementById(`report-display-${id}`);
+        const form = document.getElementById(`report-edit-form-${id}`);
+        const cancel = document.querySelector(`.report-edit-cancel[data-report-id="${id}"]`);
         toggle.addEventListener("click", () => {
             display.hidden = true;
             form.hidden = false;

@@ -97,12 +97,24 @@
                                 </div>
                                 <div class="report-actions">
                                     <button type="button" class="icon-btn report-edit-toggle" data-report-id="{{ r.id }}" aria-label="Edit report">{{ pencil_icon() }}</button>
+                                    <button type="button" class="cancel-btn email-draft-toggle" data-report-id="{{ r.id }}">Draft email</button>
                                     <form method="post"
                                           action="{{ url_for('delete_report', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}"
                                           onsubmit="return confirm('Delete this report? This cannot be undone.');">
                                         <button type="submit" class="danger-btn">Delete</button>
                                     </form>
                                 </div>
+                            </div>
+                            {% set subject, body = r.email_draft() %}
+                            <div class="email-draft" id="email-draft-{{ r.id }}" hidden>
+                                <p class="meta">To: {{ active_student.parent_email or "No parent email on file" }}</p>
+                                <label>Subject
+                                    <input type="text" id="email-subject-{{ r.id }}" value="{{ subject }}">
+                                </label>
+                                <label>Body
+                                    <textarea id="email-body-{{ r.id }}" rows="6">{{ body }}</textarea>
+                                </label>
+                                <button type="button" class="cancel-btn email-copy-btn" data-report-id="{{ r.id }}">Copy draft</button>
                             </div>
                             <form class="contact-form" method="post"
                                   action="{{ url_for('update_report_contact', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}">
@@ -323,6 +335,27 @@
                 display.hidden = false;
             });
         }
+    });
+
+    document.querySelectorAll(".email-draft-toggle").forEach((toggle) => {
+        const id = toggle.dataset.reportId;
+        const panel = document.getElementById(`email-draft-${id}`);
+        toggle.addEventListener("click", () => {
+            panel.hidden = !panel.hidden;
+        });
+    });
+
+    document.querySelectorAll(".email-copy-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const id = btn.dataset.reportId;
+            const subject = document.getElementById(`email-subject-${id}`).value;
+            const body = document.getElementById(`email-body-${id}`).value;
+            navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`).then(() => {
+                const original = btn.textContent;
+                btn.textContent = "Copied!";
+                setTimeout(() => { btn.textContent = original; }, 1500);
+            });
+        });
     });
 
     const reportTypeSelect = document.getElementById("report_type");

@@ -93,6 +93,35 @@ class BehaviorReport(db.Model):
             return PositiveReportCategory[self.category]
         return NegativeReportCategory[self.category]
 
+    def email_draft(self):
+        # Draft only -- nothing here gets sent. The teacher copies this into
+        # whatever email client they actually use, reviewing/editing first.
+        student_name = self.student.name
+        category_label = self.category_enum().value
+        extra = f"{self.notes}\n\n" if self.notes else ""
+
+        if self.report_type == ReportType.POSITIVE:
+            subject = f"Great news about {student_name}"
+            body = (
+                f"Hi,\n\n"
+                f"I wanted to share some positive news about {student_name}: {category_label}.\n\n"
+                f"{extra}"
+                f"Keep up the great work!\n\n"
+                f"Best,\n[Your name]"
+            )
+        else:
+            severity_note = f" ({self.severity.value})" if self.severity else ""
+            subject = f"Regarding {student_name} -- {category_label}"
+            body = (
+                f"Hi,\n\n"
+                f"I wanted to let you know that {student_name} was involved in an incident today "
+                f"categorized as {category_label}{severity_note}.\n\n"
+                f"{extra}"
+                f"Please reach out if you'd like to discuss further.\n\n"
+                f"Thank you,\n[Your name]"
+            )
+        return subject, body
+
 
 class ContactMethod(enum.Enum):
     EMAIL = "Email"

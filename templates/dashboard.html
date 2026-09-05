@@ -104,6 +104,21 @@
                                     </form>
                                 </div>
                             </div>
+                            <form class="contact-form" method="post"
+                                  action="{{ url_for('update_report_contact', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="contact_sent" value="1"
+                                           {% if r.contact_sent %}checked{% endif %}
+                                           onchange="this.form.requestSubmit()">
+                                    Contact sent{% if r.contact_sent_at %} ({{ r.contact_sent_at.strftime("%Y-%m-%d") }}){% endif %}
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="contact_received" value="1"
+                                           {% if r.contact_received %}checked{% endif %}
+                                           onchange="this.form.requestSubmit()">
+                                    Contact received{% if r.contact_received_at %} ({{ r.contact_received_at.strftime("%Y-%m-%d") }}){% endif %}
+                                </label>
+                            </form>
                         </div>
 
                         <form class="inline-edit-form report-edit-form" id="report-edit-form-{{ r.id }}" hidden method="post"

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from flask import Flask, redirect, render_template, request, url_for
 
@@ -237,6 +238,24 @@ def delete_report(class_id, student_id, report_id):
     db.session.delete(report)
     db.session.commit()
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
+
+
+@app.route("/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/contact", methods=["POST"])
+def update_report_contact(class_id, student_id, report_id):
+    report = BehaviorReport.query.get_or_404(report_id)
+
+    sent = "contact_sent" in request.form
+    if sent != report.contact_sent:
+        report.contact_sent_at = datetime.now(timezone.utc) if sent else None
+    report.contact_sent = sent
+
+    received = "contact_received" in request.form
+    if received != report.contact_received:
+        report.contact_received_at = datetime.now(timezone.utc) if received else None
+    report.contact_received = received
+
+    db.session.commit()
+    return redirect(url_for("view_student", class_id=class_id, student_id=student_id) + f"#report-{report_id}")
 
 
 if __name__ == "__main__":

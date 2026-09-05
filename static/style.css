@@ -361,6 +361,21 @@ button:hover {
     font-size: 0.85rem;
 }
 
+.contact-form {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+}
+
 .report-link:hover {
     color: var(--gold);
 }

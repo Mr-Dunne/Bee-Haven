@@ -76,6 +76,16 @@ class BehaviorReport(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    # Quick yes/no flags for whether this report has been communicated to the
+    # parent, separate from the detailed ParentContact log below (which records
+    # one row per contact attempt, with method/notes). The *_at timestamps
+    # exist for the planned confirm-based cloud sync (CLAUDE.md), which needs
+    # a "when did this change" marker on every field to detect conflicts.
+    contact_sent = db.Column(db.Boolean, nullable=False, default=False)
+    contact_sent_at = db.Column(db.DateTime, nullable=True)
+    contact_received = db.Column(db.Boolean, nullable=False, default=False)
+    contact_received_at = db.Column(db.DateTime, nullable=True)
+
     contacts = db.relationship("ParentContact", backref="report", lazy=True, cascade="all, delete-orphan")
 
     def category_enum(self):

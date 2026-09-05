@@ -118,18 +118,28 @@
                             </div>
                             <form class="contact-form" method="post"
                                   action="{{ url_for('update_report_contact', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="contact_sent" value="1"
-                                           {% if r.contact_sent %}checked{% endif %}
-                                           onchange="this.form.requestSubmit()">
-                                    Contact sent{% if r.contact_sent_at %} ({{ r.contact_sent_at.strftime("%Y-%m-%d") }}){% endif %}
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="contact_received" value="1"
-                                           {% if r.contact_received %}checked{% endif %}
-                                           onchange="this.form.requestSubmit()">
-                                    Contact received{% if r.contact_received_at %} ({{ r.contact_received_at.strftime("%Y-%m-%d") }}){% endif %}
-                                </label>
+                                <div class="contact-group">
+                                    <span class="contact-group-label">Contact sent:</span>
+                                    {% for field, label, checked, checked_at in r.contact_status("sent") %}
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="{{ field }}" value="1"
+                                                   {% if checked %}checked{% endif %}
+                                                   onchange="this.form.requestSubmit()">
+                                            {{ label }}{% if checked_at %} ({{ checked_at.strftime("%Y-%m-%d") }}){% endif %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="contact-group">
+                                    <span class="contact-group-label">Contact received:</span>
+                                    {% for field, label, checked, checked_at in r.contact_status("received") %}
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="{{ field }}" value="1"
+                                                   {% if checked %}checked{% endif %}
+                                                   onchange="this.form.requestSubmit()">
+                                            {{ label }}{% if checked_at %} ({{ checked_at.strftime("%Y-%m-%d") }}){% endif %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
                             </form>
                         </div>
 

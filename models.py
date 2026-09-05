@@ -78,15 +78,43 @@ class BehaviorReport(db.Model):
 
     # Quick yes/no flags for whether this report has been communicated to the
     # parent, separate from the detailed ParentContact log below (which records
-    # one row per contact attempt, with method/notes). The *_at timestamps
-    # exist for the planned confirm-based cloud sync (CLAUDE.md), which needs
-    # a "when did this change" marker on every field to detect conflicts.
-    contact_sent = db.Column(db.Boolean, nullable=False, default=False)
-    contact_sent_at = db.Column(db.DateTime, nullable=True)
-    contact_received = db.Column(db.Boolean, nullable=False, default=False)
-    contact_received_at = db.Column(db.DateTime, nullable=True)
+    # one row per contact attempt, with method/notes). One pair of columns per
+    # sent/received x method combination, named contact_<direction>_<method>
+    # (and _at for when it was ticked) -- see CONTACT_METHODS/contact_status()
+    # below, which is what the route and template actually loop over instead
+    # of naming all eight fields individually.
+    contact_sent_email = db.Column(db.Boolean, nullable=False, default=False)
+    contact_sent_email_at = db.Column(db.DateTime, nullable=True)
+    contact_sent_call = db.Column(db.Boolean, nullable=False, default=False)
+    contact_sent_call_at = db.Column(db.DateTime, nullable=True)
+    contact_sent_text = db.Column(db.Boolean, nullable=False, default=False)
+    contact_sent_text_at = db.Column(db.DateTime, nullable=True)
+    contact_sent_other = db.Column(db.Boolean, nullable=False, default=False)
+    contact_sent_other_at = db.Column(db.DateTime, nullable=True)
+
+    contact_received_email = db.Column(db.Boolean, nullable=False, default=False)
+    contact_received_email_at = db.Column(db.DateTime, nullable=True)
+    contact_received_call = db.Column(db.Boolean, nullable=False, default=False)
+    contact_received_call_at = db.Column(db.DateTime, nullable=True)
+    contact_received_text = db.Column(db.Boolean, nullable=False, default=False)
+    contact_received_text_at = db.Column(db.DateTime, nullable=True)
+    contact_received_other = db.Column(db.Boolean, nullable=False, default=False)
+    contact_received_other_at = db.Column(db.DateTime, nullable=True)
 
     contacts = db.relationship("ParentContact", backref="report", lazy=True, cascade="all, delete-orphan")
+
+    CONTACT_METHODS = ["email", "call", "text", "other"]
+    CONTACT_METHOD_LABELS = {"email": "Email", "call": "Call", "text": "Text", "other": "Other"}
+
+    def contact_status(self, direction):
+        # direction is "sent" or "received". Returns one (field_name, label,
+        # is_checked, checked_at) tuple per method, so the template can just
+        # loop instead of repeating four near-identical checkboxes by hand.
+        rows = []
+        for method in self.CONTACT_METHODS:
+            field = f"contact_{direction}_{method}"
+            rows.append((field, self.CONTACT_METHOD_LABELS[method], getattr(self, field), getattr(self, f"{field}_at")))
+        return rows
 
     def category_enum(self):
         if self.report_type == ReportType.POSITIVE:

@@ -244,15 +244,14 @@ def delete_report(class_id, student_id, report_id):
 def update_report_contact(class_id, student_id, report_id):
     report = BehaviorReport.query.get_or_404(report_id)
 
-    sent = "contact_sent" in request.form
-    if sent != report.contact_sent:
-        report.contact_sent_at = datetime.now(timezone.utc) if sent else None
-    report.contact_sent = sent
-
-    received = "contact_received" in request.form
-    if received != report.contact_received:
-        report.contact_received_at = datetime.now(timezone.utc) if received else None
-    report.contact_received = received
+    now = datetime.now(timezone.utc)
+    for direction in ("sent", "received"):
+        for method in BehaviorReport.CONTACT_METHODS:
+            field = f"contact_{direction}_{method}"
+            checked = field in request.form
+            if checked != getattr(report, field):
+                setattr(report, f"{field}_at", now if checked else None)
+            setattr(report, field, checked)
 
     db.session.commit()
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id) + f"#report-{report_id}")

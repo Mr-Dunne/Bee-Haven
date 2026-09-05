@@ -392,8 +392,22 @@ button:hover {
 
 .contact-form {
     display: flex;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.4rem;
     margin-top: 0.5rem;
+}
+
+.contact-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+}
+
+.contact-group-label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
 }
 
 .checkbox-label {

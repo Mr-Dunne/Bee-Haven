@@ -65,6 +65,19 @@ with app.app_context():
     seed_demo_data()
 
 
+@app.context_processor
+def inject_last_updated():
+    # Runs for every template render, so the nav bar's "last updated" display
+    # (base.html) doesn't need every view function to fetch and pass it.
+    teacher = get_demo_teacher()
+    last_updated = (
+        db.session.query(db.func.max(BehaviorReport.updated_at))
+        .filter(BehaviorReport.teacher_id == teacher.id)
+        .scalar()
+    )
+    return {"last_updated": last_updated}
+
+
 @app.route("/")
 def dashboard():
     teacher = get_demo_teacher()
@@ -140,10 +153,12 @@ def view_student(class_id, student_id):
 def add_class():
     teacher = get_demo_teacher()
     name = request.form.get("name", "").strip()
-    if name:
-        db.session.add(Class(name=name, teacher_id=teacher.id))
-        db.session.commit()
-    return redirect(url_for("dashboard"))
+    if not name:
+        return redirect(url_for("dashboard"))
+    new_class = Class(name=name, teacher_id=teacher.id)
+    db.session.add(new_class)
+    db.session.commit()
+    return redirect(url_for("view_class", class_id=new_class.id))
 
 
 @app.route("/classes/<int:class_id>/students", methods=["POST"])
@@ -170,6 +185,17 @@ def edit_class(class_id):
         active_class.name = name
         db.session.commit()
     return redirect(url_for("view_class", class_id=class_id))
+
+
+@app.route("/classes/<int:class_id>/delete", methods=["POST"])
+def delete_class(class_id):
+    # Cascade (Class.students -> Student.reports -> BehaviorReport.contacts,
+    # all configured in models.py) takes the whole roster and report history
+    # with it.
+    active_class = Class.query.get_or_404(class_id)
+    db.session.delete(active_class)
+    db.session.commit()
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/classes/<int:class_id>/students/<int:student_id>/edit", methods=["POST"])

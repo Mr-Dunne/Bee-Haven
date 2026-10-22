@@ -65,6 +65,39 @@ body {
     font-style: italic;
 }
 
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.status-dot.online {
+    background: #4caf82;
+}
+
+.status-dot.offline {
+    background: var(--danger);
+}
+
+.status-sep {
+    color: var(--border);
+}
+
 main {
     padding: 1.5rem;
 }
@@ -491,4 +524,10 @@ button:hover {
 
 .severity-negative {
     border-left-color: var(--danger);
+}
+
+.class-danger-zone {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 3rem;
 }

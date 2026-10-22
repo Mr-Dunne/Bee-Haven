@@ -21,7 +21,10 @@ class Class(db.Model):
     name = db.Column(db.String(120), nullable=False)
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
 
-    students = db.relationship("Student", backref="parent_class", lazy=True)
+    # Cascade so deleting a class also removes its students (which in turn
+    # cascades to their reports and contact logs) instead of hitting a
+    # foreign-key error on the not-null Student.class_id.
+    students = db.relationship("Student", backref="parent_class", lazy=True, cascade="all, delete-orphan")
 
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,6 +78,13 @@ class BehaviorReport(db.Model):
     severity = db.Column(db.Enum(ReportSeverity), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # onupdate fires automatically whenever any column on this row changes and
+    # gets committed -- covers edits and contact-checkbox toggles without
+    # needing to set this by hand in every route. Powers the "last updated"
+    # indicator in the nav bar.
+    updated_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     # Quick yes/no flags for whether this report has been communicated to the
     # parent, separate from the detailed ParentContact log below (which records

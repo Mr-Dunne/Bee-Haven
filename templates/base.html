@@ -11,10 +11,34 @@
             <span class="hex-mark"></span>
             <span class="brand-name">Bee-Haven</span>
         </a>
-        <span class="prototype-flag">Prototype -- no login, viewing as demo teacher</span>
+        <div class="navbar-right">
+            <span class="prototype-flag">Prototype -- no login, viewing as demo teacher</span>
+            <div class="sync-status">
+                <span class="status-dot" id="connection-dot" aria-hidden="true"></span>
+                <span id="connection-label">Online</span>
+                <span class="status-sep">|</span>
+                <span>Last updated: {{ last_updated.strftime("%Y-%m-%d %H:%M UTC") if last_updated else "No activity yet" }}</span>
+            </div>
+        </div>
     </nav>
     <main>
         {% block content %}{% endblock %}
     </main>
+    <script>
+        // Reflects the browser's own network connectivity. Doesn't affect
+        // anything yet since the app is fully local -- this previews the
+        // status the planned cloud sync (CLAUDE.md) will actually depend on.
+        function updateConnectionStatus() {
+            const dot = document.getElementById("connection-dot");
+            const label = document.getElementById("connection-label");
+            const online = navigator.onLine;
+            dot.classList.toggle("online", online);
+            dot.classList.toggle("offline", !online);
+            label.textContent = online ? "Online" : "Offline";
+        }
+        window.addEventListener("online", updateConnectionStatus);
+        window.addEventListener("offline", updateConnectionStatus);
+        updateConnectionStatus();
+    </script>
 </body>
 </html>

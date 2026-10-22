@@ -6,19 +6,21 @@
 
 {% block content %}
 
-<div class="class-tabs">
-    {% for c in classes %}
-        <a class="tab {% if active_class and active_class.id == c.id %}active{% endif %}"
-           href="{{ url_for('view_class', class_id=c.id) }}">{{ c.name }}</a>
-    {% endfor %}
+{% if active_class %}
+    <div class="class-tabs">
+        {% for c in classes %}
+            <a class="tab {% if active_class.id == c.id %}active{% endif %}"
+               href="{{ url_for('view_class', class_id=c.id) }}">{{ c.name }}</a>
+        {% endfor %}
 
-    <button type="button" class="tab add-tab-toggle" id="add-class-toggle">+ Add class</button>
-    <form class="tab add-tab" method="post" action="{{ url_for('add_class') }}" id="add-class-form" hidden>
-        <input type="text" name="name" placeholder="New class name" required>
-        <button type="submit">Add</button>
-        <button type="button" class="cancel-btn" id="add-class-cancel">Cancel</button>
-    </form>
-</div>
+        <button type="button" class="tab add-tab-toggle" id="add-class-toggle">+ Add class</button>
+        <form class="tab add-tab" method="post" action="{{ url_for('add_class') }}" id="add-class-form" hidden>
+            <input type="text" name="name" placeholder="New class name" required>
+            <button type="submit">Add</button>
+            <button type="button" class="cancel-btn" id="add-class-cancel">Cancel</button>
+        </form>
+    </div>
+{% endif %}
 
 <div class="split-pane">
     <section class="roster-pane">
@@ -74,7 +76,31 @@
                 </div>
             </form>
         {% else %}
-            <p class="placeholder">Select or add a class to see its roster.</p>
+            <div class="pane-header">
+                <h2>Your Classes</h2>
+            </div>
+
+            <ul class="roster-list">
+                {% for c in classes %}
+                    <li class="roster-row">
+                        <div class="roster-row-display">
+                            <a href="{{ url_for('view_class', class_id=c.id) }}">{{ c.name }}</a>
+                        </div>
+                    </li>
+                {% else %}
+                    <li class="empty">No classes yet -- add one below.</li>
+                {% endfor %}
+            </ul>
+
+            <button type="button" class="add-student-toggle" id="add-class-toggle">+ Add class</button>
+            <form method="post" action="{{ url_for('add_class') }}"
+                  class="add-student-form" id="add-class-form" hidden>
+                <input type="text" name="name" placeholder="New class name" required>
+                <div class="edit-actions">
+                    <button type="submit">Add class</button>
+                    <button type="button" class="cancel-btn" id="add-class-cancel">Cancel</button>
+                </div>
+            </form>
         {% endif %}
     </section>
 
@@ -262,6 +288,14 @@
             </div>
 
             <p class="placeholder">Select a student on the left to view detail or file a report.</p>
+
+            <div class="class-danger-zone">
+                <form method="post"
+                      action="{{ url_for('delete_class', class_id=active_class.id) }}"
+                      onsubmit="return confirm('Delete {{ active_class.name }}? This removes all its students and their report history and cannot be undone.');">
+                    <button type="submit" class="danger-btn">Delete class</button>
+                </form>
+            </div>
         {% else %}
             <p class="placeholder">Select a class to get started.</p>
         {% endif %}

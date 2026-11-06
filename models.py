@@ -162,9 +162,13 @@ class BehaviorReport(db.Model):
 
 
 class ContactMethod(enum.Enum):
+    # Same four methods (and labels) as the sent/received checkboxes on
+    # BehaviorReport (CONTACT_METHODS), so the quick flags and the detailed
+    # log describe contact the same way. Changed from Email/Phone Call/In
+    # Person/Other by migration 9c41e7b2d8a5, which maps old rows across.
     EMAIL = "Email"
-    PHONE = "Phone Call"
-    IN_PERSON = "In Person"
+    CALL = "Call"
+    TEXT = "Text"
     OTHER = "Other"
 
 
@@ -172,6 +176,9 @@ class ParentContact(db.Model):
     # Logs each time a parent/guardian was actually contacted about a specific
     # report, separate from the student's on-file contact info (parent_email/
     # parent_phone on Student) so there's a record of what was communicated and when.
+    # This is the detailed log (one row per contact, with notes); the
+    # contact_sent_*/contact_received_* checkboxes on BehaviorReport are the
+    # quick yes/no summary. The two are deliberately independent.
     id = db.Column(db.Integer, primary_key=True)
     report_id = db.Column(db.Integer, db.ForeignKey("behavior_report.id"), nullable=False)
     method = db.Column(db.Enum(ContactMethod), nullable=False)

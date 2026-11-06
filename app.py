@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 
 from flask import Flask, abort, redirect, render_template, request, url_for
 from flask_migrate import Migrate, stamp, upgrade
@@ -8,7 +8,9 @@ from sqlalchemy import inspect
 from models import (
     BehaviorReport,
     Class,
+    ContactMethod,
     NegativeReportCategory,
+    ParentContact,
     PositiveReportCategory,
     ReportSeverity,
     ReportType,
@@ -74,6 +76,11 @@ def get_owned_student(class_id, student_id):
 def get_owned_report(class_id, student_id, report_id):
     student = get_owned_student(class_id, student_id)
     return BehaviorReport.query.filter_by(id=report_id, student_id=student.id).first_or_404()
+
+
+def get_owned_contact(class_id, student_id, report_id, contact_id):
+    report = get_owned_report(class_id, student_id, report_id)
+    return ParentContact.query.filter_by(id=contact_id, report_id=report.id).first_or_404()
 
 
 def form_enum(enum_cls, field):
@@ -215,6 +222,8 @@ def view_student(class_id, student_id):
         positive_categories=list(PositiveReportCategory),
         negative_categories=list(NegativeReportCategory),
         severities=list(ReportSeverity),
+        contact_methods=list(ContactMethod),
+        today=date.today().isoformat(),
     )
 
 
@@ -352,6 +361,48 @@ def update_report_contact(class_id, student_id, report_id):
                 setattr(report, f"{field}_at", now if checked else None)
             setattr(report, field, checked)
 
+    db.session.commit()
+    return redirect(url_for("view_student", class_id=class_id, student_id=student_id) + f"#report-{report_id}")
+
+
+@app.route(
+    "/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/contacts", methods=["POST"]
+)
+def add_parent_contact(class_id, student_id, report_id):
+    # One entry in the report's detailed contact log. The date is optional and
+    # defaults to now; a teacher logging yesterday's call can backdate it.
+    report = get_owned_report(class_id, student_id, report_id)
+    method = form_enum(ContactMethod, "method")
+
+    contacted_on = request.form.get("contacted_on", "").strip()
+    if contacted_on:
+        try:
+            # Stored as midnight on that day: only the date is ever shown.
+            contacted_at = datetime.combine(date.fromisoformat(contacted_on), time.min)
+        except ValueError:
+            abort(400, description="Invalid contacted_on date.")
+    else:
+        contacted_at = datetime.now(timezone.utc)
+
+    db.session.add(
+        ParentContact(
+            report_id=report.id,
+            method=method,
+            contacted_at=contacted_at,
+            notes=request.form.get("notes", "").strip() or None,
+        )
+    )
+    db.session.commit()
+    return redirect(url_for("view_student", class_id=class_id, student_id=student_id) + f"#report-{report_id}")
+
+
+@app.route(
+    "/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/contacts/<int:contact_id>/delete",
+    methods=["POST"],
+)
+def delete_parent_contact(class_id, student_id, report_id, contact_id):
+    contact = get_owned_contact(class_id, student_id, report_id, contact_id)
+    db.session.delete(contact)
     db.session.commit()
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id) + f"#report-{report_id}")
 

@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timezone
 
 from flask import Flask, redirect, render_template, request, url_for
+from flask_migrate import Migrate, upgrade
 
 from models import (
     BehaviorReport,
@@ -20,10 +21,19 @@ app = Flask(__name__, instance_relative_config=True)
 # instance/ is gitignored, so the SQLite file itself never gets committed.
 os.makedirs(app.instance_path, exist_ok=True)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(app.instance_path, "beehaven.db")
+# BEEHAVEN_DATABASE_URI lets tests (and migration generation) point at a
+# throwaway database instead of the real instance/beehaven.db.
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "BEEHAVEN_DATABASE_URI", "sqlite:///" + os.path.join(app.instance_path, "beehaven.db")
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
+
+# Schema changes go through migrations/ (Alembic), never db.create_all(), so
+# existing data survives model changes. render_as_batch is needed because
+# SQLite can't ALTER/DROP columns in place; batch mode rebuilds the table.
+migrate = Migrate(app, db, render_as_batch=True)
 
 # Prototype only: there's no login system yet, so every page acts as this one
 # hard-coded teacher. CLAUDE.md's FERPA rule (every query scoped to the
@@ -60,9 +70,14 @@ def seed_demo_data():
     db.session.commit()
 
 
-with app.app_context():
-    db.create_all()
-    seed_demo_data()
+def init_db():
+    # Bring the database up to the latest migration, then seed the demo
+    # teacher on a fresh database. Runs on `python app.py` rather than at
+    # import, so `flask db ...` commands (which import this module) can
+    # migrate/downgrade without the app fighting them.
+    with app.app_context():
+        upgrade()
+        seed_demo_data()
 
 
 @app.context_processor
@@ -284,4 +299,5 @@ def update_report_contact(class_id, student_id, report_id):
 
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)

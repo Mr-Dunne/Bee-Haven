@@ -2,7 +2,8 @@ import os
 from datetime import datetime, timezone
 
 from flask import Flask, redirect, render_template, request, url_for
-from flask_migrate import Migrate, upgrade
+from flask_migrate import Migrate, stamp, upgrade
+from sqlalchemy import inspect
 
 from models import (
     BehaviorReport,
@@ -70,12 +71,31 @@ def seed_demo_data():
     db.session.commit()
 
 
+# The first migration, which matches the schema db.create_all() used to build
+# before migrations existed. See adopt_pre_migration_db() below.
+BASELINE_REVISION = "6af254fa3cff"
+
+
+def adopt_pre_migration_db():
+    # A database made by an older copy of the app (via db.create_all()) has
+    # the tables but no alembic_version table, so upgrade() would try to
+    # create the tables again and fail with "table already exists". Those
+    # tables match the baseline exactly, so record the database as being at
+    # the baseline (no SQL run), and upgrade() then applies only the newer
+    # migrations. Stamping the baseline rather than "head" matters: anything
+    # added after it still has to actually run.
+    tables = inspect(db.engine).get_table_names()
+    if "teacher" in tables and "alembic_version" not in tables:
+        stamp(revision=BASELINE_REVISION)
+
+
 def init_db():
     # Bring the database up to the latest migration, then seed the demo
     # teacher on a fresh database. Runs on `python app.py` rather than at
     # import, so `flask db ...` commands (which import this module) can
     # migrate/downgrade without the app fighting them.
     with app.app_context():
+        adopt_pre_migration_db()
         upgrade()
         seed_demo_data()
 

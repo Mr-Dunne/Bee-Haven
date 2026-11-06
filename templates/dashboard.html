@@ -251,7 +251,10 @@
             <h3>Manage student</h3>
             <form method="post"
                   action="{{ url_for('delete_student', class_id=active_class.id, student_id=active_student.id) }}"
-                  onsubmit="return confirm('Remove {{ active_student.name }}? This also deletes their report history and cannot be undone.');">
+                  {# tojson makes the name a safe JS string (an apostrophe like O'Brien would otherwise end the string early,
+                     the script errors, and the form submits with no confirmation). It escapes ' but not ", so the
+                     attribute must use single quotes. #}
+                  onsubmit='return confirm({{ ("Remove " ~ active_student.name ~ "? This also deletes their report history and cannot be undone.")|tojson }});'>
                 <button type="submit" class="danger-btn">Remove student</button>
             </form>
         {% elif active_report_type %}
@@ -292,7 +295,8 @@
             <div class="class-danger-zone">
                 <form method="post"
                       action="{{ url_for('delete_class', class_id=active_class.id) }}"
-                      onsubmit="return confirm('Delete {{ active_class.name }}? This removes all its students and their report history and cannot be undone.');">
+                      {# Single-quoted + tojson for the same reason as the Remove student prompt. #}
+                      onsubmit='return confirm({{ ("Delete " ~ active_class.name ~ "? This removes all its students and their report history and cannot be undone.")|tojson }});'>
                     <button type="submit" class="danger-btn">Delete class</button>
                 </form>
             </div>

@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timezone
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, abort, redirect, render_template, request, url_for
 from flask_migrate import Migrate, stamp, upgrade
 from sqlalchemy import inspect
 
@@ -53,6 +53,37 @@ DEMO_STUDENTS = [
 
 def get_demo_teacher():
     return Teacher.query.filter_by(email=DEMO_TEACHER_EMAIL).first()
+
+
+# Every route loads records through these instead of by bare ID, so a URL can
+# only reach the current teacher's own data, and the IDs in a URL have to
+# agree with each other (/classes/1/students/9 is a 404 if student 9 is in
+# class 2). A 404 rather than a 403 also avoids confirming another teacher's
+# record exists. When real login replaces get_demo_teacher(), this is the
+# one place the FERPA scoping rule lives.
+def get_owned_class(class_id):
+    teacher = get_demo_teacher()
+    return Class.query.filter_by(id=class_id, teacher_id=teacher.id).first_or_404()
+
+
+def get_owned_student(class_id, student_id):
+    owned_class = get_owned_class(class_id)
+    return Student.query.filter_by(id=student_id, class_id=owned_class.id).first_or_404()
+
+
+def get_owned_report(class_id, student_id, report_id):
+    student = get_owned_student(class_id, student_id)
+    return BehaviorReport.query.filter_by(id=report_id, student_id=student.id).first_or_404()
+
+
+def form_enum(enum_cls, field):
+    # Look up a submitted form value by enum member name. A missing or unknown
+    # value means a tampered or out-of-date form, so answer 400 Bad Request
+    # instead of letting the KeyError become a 500.
+    value = request.form.get(field)
+    if value not in enum_cls.__members__:
+        abort(400, description=f"Invalid {field}.")
+    return enum_cls[value]
 
 
 def seed_demo_data():
@@ -124,7 +155,7 @@ def dashboard():
 def view_class(class_id):
     teacher = get_demo_teacher()
     classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    active_class = Class.query.get_or_404(class_id)
+    active_class = get_owned_class(class_id)
 
     reports = BehaviorReport.query.join(Student).filter(Student.class_id == class_id).all()
     positive_count = sum(1 for r in reports if r.report_type == ReportType.POSITIVE)
@@ -145,7 +176,10 @@ def view_class(class_id):
 def class_reports(class_id, report_type):
     teacher = get_demo_teacher()
     classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    active_class = Class.query.get_or_404(class_id)
+    active_class = get_owned_class(class_id)
+    # Part of the URL, so an unknown type is "no such page" (404), not a bad form (400).
+    if report_type.upper() not in ReportType.__members__:
+        abort(404)
     rtype = ReportType[report_type.upper()]
 
     reports = (
@@ -169,8 +203,8 @@ def class_reports(class_id, report_type):
 def view_student(class_id, student_id):
     teacher = get_demo_teacher()
     classes = Class.query.filter_by(teacher_id=teacher.id).all()
-    active_class = Class.query.get_or_404(class_id)
-    active_student = Student.query.get_or_404(student_id)
+    active_student = get_owned_student(class_id, student_id)
+    active_class = active_student.parent_class
 
     return render_template(
         "dashboard.html",
@@ -198,11 +232,14 @@ def add_class():
 
 @app.route("/classes/<int:class_id>/students", methods=["POST"])
 def add_student(class_id):
+    # Also stops a student being added to a class ID that doesn't exist
+    # (SQLite doesn't enforce foreign keys by default, so it would save).
+    owned_class = get_owned_class(class_id)
     name = request.form.get("name", "").strip()
     if name:
         db.session.add(
             Student(
-                class_id=class_id,
+                class_id=owned_class.id,
                 name=name,
                 parent_email=request.form.get("parent_email", "").strip() or None,
                 parent_phone=request.form.get("parent_phone", "").strip() or None,
@@ -214,7 +251,7 @@ def add_student(class_id):
 
 @app.route("/classes/<int:class_id>/edit", methods=["POST"])
 def edit_class(class_id):
-    active_class = Class.query.get_or_404(class_id)
+    active_class = get_owned_class(class_id)
     name = request.form.get("name", "").strip()
     if name:
         active_class.name = name
@@ -227,7 +264,7 @@ def delete_class(class_id):
     # Cascade (Class.students -> Student.reports -> BehaviorReport.contacts,
     # all configured in models.py) takes the whole roster and report history
     # with it.
-    active_class = Class.query.get_or_404(class_id)
+    active_class = get_owned_class(class_id)
     db.session.delete(active_class)
     db.session.commit()
     return redirect(url_for("dashboard"))
@@ -235,7 +272,7 @@ def delete_class(class_id):
 
 @app.route("/classes/<int:class_id>/students/<int:student_id>/edit", methods=["POST"])
 def edit_student(class_id, student_id):
-    student = Student.query.get_or_404(student_id)
+    student = get_owned_student(class_id, student_id)
     name = request.form.get("name", "").strip()
     if name:
         student.name = name
@@ -249,7 +286,7 @@ def edit_student(class_id, student_id):
 def delete_student(class_id, student_id):
     # Cascade (configured on Student.reports / BehaviorReport.contacts in models.py)
     # takes the student's reports and those reports' contact logs with them.
-    student = Student.query.get_or_404(student_id)
+    student = get_owned_student(class_id, student_id)
     db.session.delete(student)
     db.session.commit()
     return redirect(url_for("view_class", class_id=class_id))
@@ -258,14 +295,15 @@ def delete_student(class_id, student_id):
 @app.route("/classes/<int:class_id>/students/<int:student_id>/reports", methods=["POST"])
 def add_report(class_id, student_id):
     teacher = get_demo_teacher()
-    report_type = ReportType[request.form["report_type"]]
+    student = get_owned_student(class_id, student_id)
+    report_type = form_enum(ReportType, "report_type")
     category_enum = PositiveReportCategory if report_type == ReportType.POSITIVE else NegativeReportCategory
-    category = category_enum[request.form["category"]]
-    severity = ReportSeverity[request.form["severity"]] if report_type == ReportType.NEGATIVE else None
+    category = form_enum(category_enum, "category")
+    severity = form_enum(ReportSeverity, "severity") if report_type == ReportType.NEGATIVE else None
 
     db.session.add(
         BehaviorReport(
-            student_id=student_id,
+            student_id=student.id,
             teacher_id=teacher.id,
             report_type=report_type,
             category=category.name,
@@ -281,11 +319,11 @@ def add_report(class_id, student_id):
 def edit_report(class_id, student_id, report_id):
     # report_type is not editable here: it decides which category enum applies,
     # so switching positive/negative is a delete-and-refile, not an edit.
-    report = BehaviorReport.query.get_or_404(report_id)
+    report = get_owned_report(class_id, student_id, report_id)
     category_enum = PositiveReportCategory if report.report_type == ReportType.POSITIVE else NegativeReportCategory
-    report.category = category_enum[request.form["category"]].name
+    report.category = form_enum(category_enum, "category").name
     if report.report_type == ReportType.NEGATIVE:
-        report.severity = ReportSeverity[request.form["severity"]]
+        report.severity = form_enum(ReportSeverity, "severity")
     report.notes = request.form.get("notes", "").strip() or None
     db.session.commit()
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
@@ -295,7 +333,7 @@ def edit_report(class_id, student_id, report_id):
 def delete_report(class_id, student_id, report_id):
     # Cascade (configured on BehaviorReport.contacts in models.py) takes the
     # report's contact log with it.
-    report = BehaviorReport.query.get_or_404(report_id)
+    report = get_owned_report(class_id, student_id, report_id)
     db.session.delete(report)
     db.session.commit()
     return redirect(url_for("view_student", class_id=class_id, student_id=student_id))
@@ -303,7 +341,7 @@ def delete_report(class_id, student_id, report_id):
 
 @app.route("/classes/<int:class_id>/students/<int:student_id>/reports/<int:report_id>/contact", methods=["POST"])
 def update_report_contact(class_id, student_id, report_id):
-    report = BehaviorReport.query.get_or_404(report_id)
+    report = get_owned_report(class_id, student_id, report_id)
 
     now = datetime.now(timezone.utc)
     for direction in ("sent", "received"):

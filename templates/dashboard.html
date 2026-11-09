@@ -126,7 +126,7 @@
                                     <button type="button" class="cancel-btn email-draft-toggle" data-report-id="{{ r.id }}">Draft email</button>
                                     <form method="post"
                                           action="{{ url_for('delete_report', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}"
-                                          onsubmit="return confirm('Delete this report? This cannot be undone.');">
+                                          onsubmit='return confirm({{ "Delete this report? This cannot be undone."|tojson }});'>
                                         <button type="submit" class="danger-btn">Delete</button>
                                     </form>
                                 </div>
@@ -167,6 +167,51 @@
                                     {% endfor %}
                                 </div>
                             </form>
+
+                            {# Detailed contact log: one entry per contact, with notes. Separate from the
+                               quick sent/received checkboxes above (see ParentContact in models.py). #}
+                            <div class="contact-log">
+                                <span class="contact-group-label">Contact log</span>
+                                <ul class="contact-log-list">
+                                    {% for c in r.contacts|sort(attribute="contacted_at", reverse=true) %}
+                                        <li class="contact-log-entry">
+                                            <div>
+                                                <strong>{{ c.method.value }}</strong>
+                                                <span class="contact-log-date">{{ c.contacted_at.strftime("%Y-%m-%d") }}</span>
+                                                {% if c.notes %}<p>{{ c.notes }}</p>{% endif %}
+                                            </div>
+                                            <form method="post"
+                                                  action="{{ url_for('delete_parent_contact', class_id=active_class.id, student_id=active_student.id, report_id=r.id, contact_id=c.id) }}"
+                                                  onsubmit='return confirm({{ ("Delete this " ~ c.method.value|lower ~ " entry from " ~ c.contacted_at.strftime("%Y-%m-%d") ~ "? This cannot be undone.")|tojson }});'>
+                                                <button type="submit" class="danger-btn small-btn" aria-label="Delete contact log entry">Delete</button>
+                                            </form>
+                                        </li>
+                                    {% else %}
+                                        <li class="contact-log-entry empty">No contacts logged yet.</li>
+                                    {% endfor %}
+                                </ul>
+                                <button type="button" class="cancel-btn small-btn contact-log-toggle" data-report-id="{{ r.id }}">+ Log contact</button>
+                                <form class="contact-log-form" id="contact-log-form-{{ r.id }}" hidden method="post"
+                                      action="{{ url_for('add_parent_contact', class_id=active_class.id, student_id=active_student.id, report_id=r.id) }}">
+                                    <label>Method
+                                        <select name="method" required>
+                                            {% for m in contact_methods %}
+                                                <option value="{{ m.name }}">{{ m.value }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label>Date
+                                        <input type="date" name="contacted_on" value="{{ today }}" max="{{ today }}">
+                                    </label>
+                                    <label>Notes
+                                        <textarea name="notes" rows="2" placeholder="What was discussed?"></textarea>
+                                    </label>
+                                    <div class="edit-actions">
+                                        <button type="submit">Save</button>
+                                        <button type="button" class="cancel-btn contact-log-cancel" data-report-id="{{ r.id }}">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
 
                         <form class="inline-edit-form report-edit-form" id="report-edit-form-{{ r.id }}" hidden method="post"
@@ -251,7 +296,10 @@
             <h3>Manage student</h3>
             <form method="post"
                   action="{{ url_for('delete_student', class_id=active_class.id, student_id=active_student.id) }}"
-                  onsubmit="return confirm('Remove {{ active_student.name }}? This also deletes their report history and cannot be undone.');">
+                  {# tojson makes the name a safe JS string (an apostrophe like O'Brien would otherwise end the string early,
+                     the script errors, and the form submits with no confirmation). It escapes ' but not ", so the
+                     attribute must use single quotes. #}
+                  onsubmit='return confirm({{ ("Remove " ~ active_student.name ~ "? This also deletes their report history and cannot be undone.")|tojson }});'>
                 <button type="submit" class="danger-btn">Remove student</button>
             </form>
         {% elif active_report_type %}
@@ -292,7 +340,8 @@
             <div class="class-danger-zone">
                 <form method="post"
                       action="{{ url_for('delete_class', class_id=active_class.id) }}"
-                      onsubmit="return confirm('Delete {{ active_class.name }}? This removes all its students and their report history and cannot be undone.');">
+                      {# Single-quoted + tojson for the same reason as the Remove student prompt. #}
+                      onsubmit='return confirm({{ ("Delete " ~ active_class.name ~ "? This removes all its students and their report history and cannot be undone.")|tojson }});'>
                     <button type="submit" class="danger-btn">Delete class</button>
                 </form>
             </div>
@@ -386,6 +435,21 @@
         const panel = document.getElementById(`email-draft-${id}`);
         toggle.addEventListener("click", () => {
             panel.hidden = !panel.hidden;
+        });
+    });
+
+    document.querySelectorAll(".contact-log-toggle").forEach((toggle) => {
+        const id = toggle.dataset.reportId;
+        const form = document.getElementById(`contact-log-form-${id}`);
+        const cancel = form.querySelector(".contact-log-cancel");
+        toggle.addEventListener("click", () => {
+            form.hidden = false;
+            toggle.hidden = true;
+        });
+        cancel.addEventListener("click", () => {
+            form.hidden = true;
+            form.reset();
+            toggle.hidden = false;
         });
     });
 

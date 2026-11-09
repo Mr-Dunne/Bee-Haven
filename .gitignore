@@ -9,3 +9,4 @@ instance/
 .vscode/
 .DS_Store
 CLAUDE.md
+.pytest_cache/
